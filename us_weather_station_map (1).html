@@ -1,0 +1,69 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>US Weather Stations Map (Prototype)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"/>
+  <style>
+    html, body, #map { height: 100%; margin: 0; padding: 0; }
+    .legend { background:white;border:1px solid #999;padding:4px;font-size:13px;line-height:18px; }
+    .legend span { display:inline-block;width:12px;height:12px;margin-right:4px;border-radius:50%; }
+  </style>
+</head>
+<body>
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+<script>
+  const map = L.map('map').setView([39.5, -98.35], 5);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+
+  const legend = L.control({position:'bottomleft'});
+  legend.onAdd = function(){
+      const div = L.DomUtil.create('div','legend');
+      div.innerHTML = '<span style="background:#0068ff"></span> NWS / ASOS<br>'
+                    + '<span style="background:#e58606"></span> PWS (CWOP/MADIS)';
+      return div;
+  }
+  legend.addTo(map);
+
+  async function plotMETAR(){
+    try{
+      const url='https://aviationweather.gov/adds/dataserver_current/httpparam?dataSource=metars&requestType=retrieve&format=csv&hoursBeforeNow=1';
+      const res=await fetch(url); const txt=await res.text();
+      const rows=txt.split('\n').slice(6);
+      rows.forEach(r=>{
+        const c=r.split(',');
+        if(c.length<11) return;
+        const lat=parseFloat(c[6]); const lon=parseFloat(c[7]);
+        if(isNaN(lat)||isNaN(lon)) return;
+        const tempC=c[9]; if(tempC==='') return;
+        const tempF=(parseFloat(tempC)*9/5+32).toFixed(1);
+        const obs=c[0];
+        const m=L.circleMarker([lat,lon],{radius:5,color:'#0068ff',fillColor:'#0068ff',fillOpacity:0.7}).addTo(map);
+        m.bindPopup(`<b>${c[1]}</b><br>Temp: ${tempF} °F<br>Obs: ${obs}`);
+      });
+    }catch(e){console.error(e);}
+  }
+
+  async function plotCWOP(){
+    try{
+      const url='https://api.alltheweather.io/latest'; // example proxy returning MADIS-like JSON
+      const res=await fetch(url);
+      const arr=await res.json();
+      arr.forEach(st=>{
+        if(!st.tempF) return;
+        const m=L.circleMarker([st.lat,st.lon],{radius:4,color:'#e58606',fillColor:'#e58606',fillOpacity:0.7}).addTo(map);
+        m.bindPopup(`<b>${st.id}</b><br>Temp: ${st.tempF.toFixed(1)} °F<br>Obs: ${st.time}`);
+      });
+    }catch(e){console.warn('CWOP load failed');}
+  }
+
+  plotMETAR();
+  plotCWOP();
+</script>
+</body>
+</html>

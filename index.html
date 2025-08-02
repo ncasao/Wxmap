@@ -1,1 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>US Weather Stations Map</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <!-- Leaflet via jsDelivr (works on GitHub Pages) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+  <style>
+    html,body,#map{height:100%;margin:0}
+    .legend{background:#fff;border:1px solid #777;padding:4px 6px;font:13px/16px sans-serif}
+    .legend span{display:inline-block;width:12px;height:12px;margin-right:4px;border-radius:50%}
+  </style>
+</head>
+<body>
+<div id="map"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+<script>
+// --- basic map -------------------------------------------------------------
+const map = L.map('map').setView([39.5, -98.35], 5);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  attribution:'© OpenStreetMap'
+}).addTo(map);
+
+// legend
+L.control({position:'bottomleft'}).onAdd = () => {
+  const d = L.DomUtil.create('div','legend');
+  d.innerHTML =
+    '<span style="background:#0068ff"></span> NWS / ASOS';
+  return d;
+}.addTo(map);
+
+// --- data fetch helpers ----------------------------------------------------
+const proxy = u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`;
+
+// fetch METARs from past 1 h and plot
+(async ()=>{
+  try{
+    const src = 'https://aviationweather.gov/adds/datas
